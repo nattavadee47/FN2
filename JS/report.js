@@ -335,7 +335,14 @@ async function loadExerciseData() {
 
         console.log('🔑 Using token:', token.substring(0, 20) + '...');
 
-        const response = await fetch(`${API_CONFIG.BASE_URL}/api/exercise-sessions`, {
+        // ✅ เพิ่ม query parameters ที่ชัดเจน
+        const period = window.currentPeriod || '7days';
+        const limit = 100;
+        const url = `${API_CONFIG.BASE_URL}/api/exercise-sessions?period=${period}&limit=${limit}`;
+        
+        console.log('📡 Fetching from:', url);
+
+        const response = await fetch(url, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -348,6 +355,16 @@ async function loadExerciseData() {
         if (!response.ok) {
             const errorData = await response.json();
             console.error('❌ API Error:', errorData);
+            
+            // ✅ จัดการ error codes ที่เฉพาะเจาะจง
+            if (response.status === 401 || response.status === 403) {
+                alert('Session หมดอายุ กรุณาเข้าสู่ระบบใหม่');
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 2000);
+                return;
+            }
+            
             throw new Error(errorData.message || `API Error: ${response.status}`);
         }
 
@@ -361,18 +378,14 @@ async function loadExerciseData() {
             exerciseHistory = result.data.map(session => {
                 const leftReps = parseInt(session.actual_reps_left) || 0;
                 const rightReps = parseInt(session.actual_reps_right) || 0;
-                const totalReps = leftReps + rightReps;
-                
-                console.log(`Session ${session.session_id}:`, {
-                    left: leftReps,
-                    right: rightReps,
-                    total: totalReps,
-                    date: session.session_date
-                });
+                const totalReps = leftReps + rightReps || parseInt(session.actual_reps) || 0;
                 
                 return {
-                    exercise: session.exercise_id,
-                    exerciseName: session.exercise_name_th || session.exercise_name_en || session.description || 'ท่ากายภาพ',
+                    session_id: session.session_id,
+                    exercise_id: session.exercise_id,
+                    exercise_name: session.exercise_name_th || session.exercise_name_en || 'ท่ากายภาพ',
+                    date: formatThaiDate(session.session_date),
+                    time: formatThaiTime(session.session_date),
                     actual_reps_left: leftReps,
                     actual_reps_right: rightReps,
                     actual_reps: totalReps,
@@ -388,8 +401,9 @@ async function loadExerciseData() {
             exerciseHistory.sort((a, b) => b.timestamp - a.timestamp);
 
             console.log('✅ Processed history:', exerciseHistory.length, 'sessions');
-            console.log('Sample data:', exerciseHistory[0]);
+            console.log('📋 Sample data:', exerciseHistory[0]);
 
+            // ✅ อัพเดท UI ทั้งหมด
             updateTable();
             updateSummaryCards();
             updateChart();
@@ -397,7 +411,9 @@ async function loadExerciseData() {
             
         } else {
             console.log('⚠️ No exercise data found in database');
-            createSampleData();
+            
+            // ✅ ลองโหลดจาก localStorage
+            loadFromLocalStorage();
         }
 
     } catch (error) {
@@ -411,7 +427,47 @@ async function loadExerciseData() {
             return;
         }
         
-        console.log('⚠️ Falling back to sample data...');
+        console.log('⚠️ Falling back to localStorage...');
+        loadFromLocalStorage();
+    }
+}
+
+function loadFromLocalStorage() {
+    try {
+        console.log('📦 Loading from localStorage...');
+        
+        const historyStr = localStorage.getItem('exerciseHistory');
+        if (historyStr) {
+            const localHistory = JSON.parse(historyStr);
+            console.log('✅ Found localStorage data:', localHistory.length, 'sessions');
+            
+            // แปลงข้อมูล localStorage ให้ตรงกับโครงสร้างใหม่
+            exerciseHistory = localHistory.map(item => ({
+                session_id: null,
+                exercise_id: null,
+                exercise_name: item.exerciseName || item.exercise || 'ท่ากายภาพ',
+                date: item.date || formatThaiDate(item.completedAt),
+                time: item.time || formatThaiTime(item.completedAt),
+                actual_reps: item.reps || 0,
+                actual_reps_left: 0,
+                actual_reps_right: 0,
+                accuracy: item.accuracy || 0,
+                duration_seconds: item.sessionStats?.exerciseTime || 0,
+                notes: '',
+                timestamp: new Date(item.completedAt || Date.now()).getTime()
+            }));
+
+            // อัพเดท UI
+            updateTable();
+            updateSummaryCards();
+            updateChart();
+            
+        } else {
+            console.log('⚠️ No data in localStorage');
+            createSampleData();
+        }
+    } catch (e) {
+        console.error('Error loading from localStorage:', e);
         createSampleData();
     }
 }
@@ -507,76 +563,76 @@ function createSampleData() {
 
 // ===== TABLE FUNCTIONS =====
 function updateTable() {
-    const tbody = document.getElementById('therapyTableBody');
-    if (!tbody) return;
+    const tableBody = document.getElementById('exercise-table-body');
     
-    tbody.innerHTML = '';
-
-    if (exerciseHistory.length === 0) {
-        const row = tbody.insertRow();
-        row.innerHTML = `<td colspan="7" style="text-align: center; color: #718096; padding: 2rem;">ยังไม่มีข้อมูลการออกกำลังกาย</td>`;
+    if (!tableBody) {
+        console.error('❌ ไม่พบ element: exercise-table-body');
         return;
     }
 
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = Math.min(startIndex + itemsPerPage, exerciseHistory.length);
+    console.log('📊 Updating table with', exerciseHistory.length, 'rows');
 
-    for (let i = startIndex; i < endIndex; i++) {
-        const session = exerciseHistory[i];
-        const row = tbody.insertRow();
-        
-        const leftReps = parseInt(session.actual_reps_left) || 0;
-        const rightReps = parseInt(session.actual_reps_right) || 0;
-        const totalReps = leftReps + rightReps;
-        
-        // ✅ ใช้ฟังก์ชันแปลงวันที่และเวลาที่แก้ไขแล้ว
-        const displayDate = formatThaiDate(session.session_date);
-        const displayTime = formatThaiTime(session.session_date);
-        
-        // ✅ แสดงชื่อท่าภาษาไทย (ใช้ exercise_name_th ก่อน ถ้าไม่มีใช้ exerciseName)
-        const exerciseName = session.exercise_name_th || session.exerciseName || 'ท่ากายภาพ';
-        
-        // ✅ เพิ่มคอลัมน์เกณฑ์ประเมิน
-        const performanceLevel = getPerformanceLevel(totalReps, session.exercise_id);
-        
-        console.log(`📋 Row ${i}:`, {
-            session_id: session.session_id,
-            exercise_id: session.exercise_id,
-            exercise_name: exerciseName,
-            date: displayDate,
-            time: displayTime,
-            left: leftReps,
-            right: rightReps,
-            total: totalReps,
-            performance: performanceLevel
-        });
-        
-        row.innerHTML = `
-            <td>${displayDate}</td>
-            <td style="color: #718096;">${displayTime}</td>
-            <td><strong>${exerciseName}</strong></td>
-            <td style="text-align: center;">
-                <span style="font-weight: 600; color: #3182ce;">
-                    ${leftReps} ครั้ง
-                </span>
-            </td>
-            <td style="text-align: center;">
-                <span style="font-weight: 600; color: #38a169;">
-                    ${rightReps} ครั้ง
-                </span>
-            </td>
-            <td style="text-align: center;">
-                <span style="font-weight: 700; color: #2563eb; font-size: 16px;">
-                    ${totalReps} ครั้ง
-                </span>
-            </td>
-            <td style="text-align: center;">
-                ${performanceLevel}
-            </td>
+    if (exerciseHistory.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 2rem;">
+                    <div style="color: #666;">
+                        <p style="font-size: 1.2rem; margin-bottom: 1rem;">📋 ยังไม่มีข้อมูลการออกกำลัง</p>
+                        <p style="margin-bottom: 1rem;">เริ่มต้นการออกกำลังของคุณวันนี้เลย!</p>
+                        <a href="dashboard.html" class="btn btn-primary" style="display: inline-block; padding: 0.5rem 1.5rem; background: #4CAF50; color: white; text-decoration: none; border-radius: 5px;">
+                            เริ่มออกกำลัง
+                        </a>
+                    </div>
+                </td>
+            </tr>
         `;
+        return;
     }
-    updateTableInfo();
-    updatePagination();
+
+    // ✅ สร้างแถวตาราง
+    tableBody.innerHTML = exerciseHistory.map((row, index) => {
+        // แสดง reps แบบละเอียด
+        let repsDisplay;
+        if (row.actual_reps_left && row.actual_reps_right) {
+            repsDisplay = `${row.actual_reps} <small style="color: #666;">(L:${row.actual_reps_left} R:${row.actual_reps_right})</small>`;
+        } else {
+            repsDisplay = row.actual_reps;
+        }
+
+        // กำหนดสี badge ตามความแม่นยำ
+        let badgeClass, badgeColor;
+        if (row.accuracy >= 80) {
+            badgeClass = 'excellent';
+            badgeColor = '#4CAF50';
+        } else if (row.accuracy >= 60) {
+            badgeClass = 'good';
+            badgeColor = '#2196F3';
+        } else if (row.accuracy >= 40) {
+            badgeClass = 'fair';
+            badgeColor = '#FF9800';
+        } else {
+            badgeClass = 'poor';
+            badgeColor = '#F44336';
+        }
+
+        return `
+            <tr>
+                <td>${index + 1}</td>
+                <td><strong>${row.exercise_name}</strong></td>
+                <td>${row.date}</td>
+                <td>${row.time}</td>
+                <td>${repsDisplay}</td>
+                <td>
+                    <span class="accuracy-badge accuracy-${badgeClass}" 
+                          style="background: ${badgeColor}; color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-weight: 500;">
+                        ${Math.round(row.accuracy)}%
+                    </span>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    console.log('✅ Table updated successfully');
 }
 
 function getAccuracyClass(accuracy) {
@@ -614,32 +670,85 @@ function updatePagination() {
 
 // ===== SUMMARY & CHART =====
 function updateSummaryCards() {
-    if (exerciseHistory.length === 0) return;
-
-    const totalAccuracy = exerciseHistory.reduce((sum, session) => sum + (session.accuracy || 0), 0);
-    const averageAccuracy = Math.round(totalAccuracy / exerciseHistory.length);
+    console.log('📊 Updating summary cards...');
     
-    const bestAccuracy = Math.max(...exerciseHistory.map(session => session.accuracy || 0));
-    
-    const lastWeek = Date.now() - (7 * 24 * 60 * 60 * 1000);
-    const recentSessions = exerciseHistory.filter(session => 
-        session.timestamp >= lastWeek
-    );
-
-    const bestEl = document.getElementById('bestSession');
-    const consistencyEl = document.getElementById('consistencyScore');
-    
-    if (bestEl) {
-        bestEl.textContent = `${bestAccuracy}%`;
-        bestEl.style.color = bestAccuracy >= 90 ? '#4CAF50' : bestAccuracy >= 75 ? '#FF9800' : '#F44336';
+    if (exerciseHistory.length === 0) {
+        console.log('⚠️ No data for summary');
+        return;
     }
-    
-    if (consistencyEl) {
-        consistencyEl.textContent = `${recentSessions.length} วัน`;
-        consistencyEl.style.color = recentSessions.length >= 5 ? '#4CAF50' : recentSessions.length >= 3 ? '#FF9800' : '#F44336';
-    }
+
+    // คำนวณสถิติ
+    const totalSessions = exerciseHistory.length;
+    const totalReps = exerciseHistory.reduce((sum, item) => sum + (item.actual_reps || 0), 0);
+    const avgAccuracy = exerciseHistory.reduce((sum, item) => sum + (item.accuracy || 0), 0) / totalSessions;
+    const totalDuration = exerciseHistory.reduce((sum, item) => sum + (item.duration_seconds || 0), 0);
+
+    console.log('📈 Stats:', { totalSessions, totalReps, avgAccuracy: Math.round(avgAccuracy), totalDuration });
+
+    // ✅ อัพเดท DOM elements
+    const updates = [
+        { id: 'total-sessions', value: totalSessions },
+        { id: 'total-reps', value: totalReps },
+        { id: 'avg-accuracy', value: Math.round(avgAccuracy) + '%' },
+        { id: 'total-duration', value: Math.floor(totalDuration / 60) + ' นาที' }
+    ];
+
+    updates.forEach(({ id, value }) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = value;
+            console.log(`✅ Updated ${id}:`, value);
+        } else {
+            console.warn(`⚠️ Element not found: ${id}`);
+        }
+    });
+
+    console.log('✅ Summary cards updated');
 }
 
+// ===== 5️⃣ เพิ่มฟังก์ชัน createSampleData (สำหรับ demo) =====
+
+function createSampleData() {
+    console.log('📝 Creating sample data...');
+    
+    const now = new Date();
+    
+    exerciseHistory = [
+        {
+            session_id: null,
+            exercise_id: 1,
+            exercise_name: 'ท่ายกแขนไปข้างหน้า',
+            date: formatThaiDate(now),
+            time: formatThaiTime(now),
+            actual_reps: 10,
+            actual_reps_left: 5,
+            actual_reps_right: 5,
+            accuracy: 85,
+            duration_seconds: 120,
+            notes: 'ตัวอย่างข้อมูล',
+            timestamp: now.getTime()
+        },
+        {
+            session_id: null,
+            exercise_id: 2,
+            exercise_name: 'ท่าเหยียดเข่าตรง',
+            date: formatThaiDate(now),
+            time: formatThaiTime(now),
+            actual_reps: 8,
+            actual_reps_left: 4,
+            actual_reps_right: 4,
+            accuracy: 75,
+            duration_seconds: 100,
+            notes: 'ตัวอย่างข้อมูล',
+            timestamp: now.getTime() - 3600000
+        }
+    ];
+
+    console.log('✅ Sample data created');
+    
+    updateTable();
+    updateSummaryCards();
+}
 // แก้ไขฟังก์ชัน updateRecommendations ที่บรรทัด 542
 function updateRecommendations() {
     if (exerciseHistory.length === 0) return;
