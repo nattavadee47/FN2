@@ -1,0 +1,181 @@
+/* ===================================
+   Profile Edit Page Styles
+   =================================== */
+
+.profile-section {
+    margin-bottom: 24px;
+}
+
+/* Avatar Upload Section */
+.avatar-upload-section {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 24px;
+    background: var(--gray-50);
+    border-radius: 8px;
+    margin-bottom: 24px;
+}
+
+.avatar-preview {
+    position: relative;
+}
+
+.avatar-image {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: var(--primary-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 48px;
+    overflow: hidden;
+    border: 4px solid white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.avatar-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-status {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    background: var(--status-success);
+    border: 3px solid white;
+    border-radius: 50%;
+}
+
+.avatar-actions {
+    flex: 1;
+}
+
+.help-text {
+    font-size: 13px;
+    color: var(--text-tertiary);
+    margin-top: 8px;
+}
+
+/* Form Grid */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.required {
+    color: var(--status-danger);
+}
+
+/* Form Actions */
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border-light);
+}
+
+/* Card Enhancements */
+.card-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.card-title i {
+    color: var(--primary-blue);
+    font-size: 20px;
+}
+
+/* Input Validations */
+.form-input.error,
+.form-select.error,
+.form-textarea.error {
+    border-color: var(--status-danger);
+}
+
+.form-input.success,
+.form-select.success,
+.form-textarea.success {
+    border-color: var(--status-success);
+}
+
+.error-message {
+    color: var(--status-danger);
+    font-size: 13px;
+    margin-top: 4px;
+    display: none;
+}
+
+.error-message.show {
+    display: block;
+}
+
+/* Success Message */
+.success-banner {
+    background: #D1FAE5;
+    border: 1px solid var(--status-success);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 24px;
+    display: none;
+    align-items: center;
+    gap: 12px;
+}
+
+.success-banner.show {
+    display: flex;
+}
+
+.success-banner i {
+    color: var(--status-success);
+    font-size: 24px;
+}
+
+.success-banner-content {
+    flex: 1;
+}
+
+.success-banner-title {
+    font-weight: 600;
+    color: var(--status-success);
+    margin-bottom: 4px;
+}
+
+.success-banner-text {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .avatar-upload-section {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .form-actions {
+        flex-direction: column-reverse;
+    }
+    
+    .form-actions .btn {
+        width: 100%;
+    }
+}

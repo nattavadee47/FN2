@@ -1,0 +1,475 @@
+/* ==========================
+   SMARTCARE MEDICAL THEME - CAMERA PAGE
+========================== */
+:root {
+    --primary: #1E88E5;
+    --primary-dark: #1565C0;
+    --primary-light: #42A5F5;
+    --secondary: #66BB6A;
+    --success: #66BB6A;
+    --warning: #FFA726;
+    --danger: #E53E3E;
+
+    --surface: #ffffff;
+    --text-main: #0F172A;
+    --text-sub: #64748B;
+    --text-white: #ffffff;
+
+    --radius-xl: 40px;
+    --radius-lg: 28px;
+    --radius-md: 20px;
+
+    --elevation-1: 0 4px 16px rgba(0,0,0,0.08);
+    --elevation-2: 0 8px 32px rgba(0,0,0,0.12);
+    --elevation-3: 0 12px 48px rgba(0,0,0,0.15);
+
+    --motion: all 0.35s cubic-bezier(.4,0,.2,1);
+}
+
+/* ==========================
+   RESET
+========================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Kanit', sans-serif;
+    background: linear-gradient(180deg, #0D47A1 0%, #1565C0 50%, #1976D2 100%);
+    min-height: 100vh;
+    color: var(--text-white);
+    overflow: hidden;
+    position: relative;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(circle at 20% 30%, rgba(255,255,255,0.05) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(102,187,106,0.1) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* ==========================
+   MAIN CONTAINER
+========================== */
+.main-container {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 1;
+    padding: 20px;
+}
+
+/* ==========================
+   HEADER
+========================== */
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+    padding: 16px 24px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--elevation-2);
+}
+
+.exercise-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: white;
+    flex: 1;
+}
+
+.rep-counter {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--secondary);
+    text-shadow: 0 4px 12px rgba(102,187,106,0.5);
+    animation: pulse 0.3s ease;
+}
+
+.rep-target {
+    font-size: 1.2rem;
+    color: rgba(255,255,255,0.8);
+    margin-left: 8px;
+}
+
+/* ==========================
+   VIDEO CONTAINER
+========================== */
+.video-container {
+    position: relative;
+    flex: 1;
+    background: #000;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    box-shadow: var(--elevation-3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#input-video {
+    display: none;
+}
+
+#output-canvas {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* ==========================
+   LOADING OVERLAY
+========================== */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(13,71,161,0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    color: white;
+    font-size: 1.2rem;
+}
+
+.loading-overlay.hidden {
+    display: none;
+}
+
+.loading-spinner {
+    width: 60px;
+    height: 60px;
+    border: 5px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ==========================
+   SUCCESS FLASH
+========================== */
+.success-flash {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    width: 120px;
+    height: 120px;
+    background: var(--secondary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 60px;
+    color: white;
+    box-shadow: 0 0 40px rgba(102,187,106,0.8);
+    pointer-events: none;
+    z-index: 20;
+}
+
+.success-flash.show {
+    animation: flashSuccess 0.6s ease forwards;
+}
+
+@keyframes flashSuccess {
+    0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 0;
+    }
+    50% {
+        transform: translate(-50%, -50%) scale(1.2);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 0;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+/* ==========================
+   STATUS MESSAGE
+========================== */
+.status-message {
+    margin: 16px 0;
+    padding: 16px 24px;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius-md);
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: white;
+    box-shadow: var(--elevation-1);
+    transition: var(--motion);
+}
+
+.status-message.success {
+    background: rgba(102,187,106,0.3);
+    border: 2px solid var(--secondary);
+}
+
+.status-message.warning {
+    background: rgba(255,167,38,0.3);
+    border: 2px solid var(--warning);
+}
+
+.status-message.error {
+    background: rgba(229,62,62,0.3);
+    border: 2px solid var(--danger);
+}
+
+/* ==========================
+   CONTROLS
+========================== */
+.controls {
+    display: flex;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.btn {
+    flex: 1;
+    padding: 16px 32px;
+    border: none;
+    border-radius: 30px;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: 'Kanit', sans-serif;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: var(--motion);
+    box-shadow: var(--elevation-2);
+    background: white;
+    color: var(--text-main);
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--elevation-3);
+}
+
+.btn i {
+    font-size: 18px;
+}
+
+.btn.danger {
+    background: var(--danger);
+    color: white;
+}
+
+.btn.danger:hover {
+    background: #C53030;
+}
+
+/* ==========================
+   COMPLETE OVERLAY
+========================== */
+.complete-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(13,71,161,0.98);
+    backdrop-filter: blur(20px);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    animation: fadeIn 0.5s ease;
+}
+
+.complete-overlay.show {
+    display: flex;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.complete-icon {
+    width: 150px;
+    height: 150px;
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 32px;
+    box-shadow: 0 12px 48px rgba(255,215,0,0.5);
+    animation: bounceIn 0.8s ease;
+}
+
+@keyframes bounceIn {
+    0% {
+        transform: scale(0);
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.complete-icon i {
+    font-size: 80px;
+    color: white;
+}
+
+.complete-text {
+    font-size: 3rem;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 16px;
+    animation: slideUp 0.8s ease 0.2s both;
+}
+
+.complete-subtitle {
+    font-size: 1.5rem;
+    color: rgba(255,255,255,0.9);
+    animation: slideUp 0.8s ease 0.4s both;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==========================
+   MOBILE RESPONSIVE
+========================== */
+@media (max-width: 768px) {
+    .main-container {
+        padding: 12px;
+    }
+
+    .header {
+        padding: 12px 16px;
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+    }
+
+    .exercise-title {
+        font-size: 1.2rem;
+    }
+
+    .rep-counter {
+        font-size: 2.5rem;
+    }
+
+    .rep-target {
+        font-size: 1rem;
+    }
+
+    .status-message {
+        font-size: 1rem;
+        padding: 12px 16px;
+    }
+
+    .controls {
+        flex-direction: column;
+    }
+
+    .complete-icon {
+        width: 120px;
+        height: 120px;
+    }
+
+    .complete-icon i {
+        font-size: 60px;
+    }
+
+    .complete-text {
+        font-size: 2rem;
+    }
+
+    .complete-subtitle {
+        font-size: 1.2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .video-container {
+        border-radius: var(--radius-lg);
+    }
+
+    .btn {
+        padding: 14px 24px;
+        font-size: 15px;
+    }
+}
+
+/* ==========================
+   LANDSCAPE MODE
+========================== */
+@media (orientation: landscape) and (max-height: 600px) {
+    .main-container {
+        flex-direction: row;
+        gap: 16px;
+    }
+
+    .header {
+        writing-mode: vertical-rl;
+        width: auto;
+        height: 100%;
+    }
+
+    .video-container {
+        flex: 1;
+    }
+
+    .controls {
+        writing-mode: vertical-rl;
+        flex-direction: row;
+    }
+}

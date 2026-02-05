@@ -1,0 +1,213 @@
+/* contact.css */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Sarabun', 'Sukhumvit Set', 'Thonburi', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #f5f5f5;
+    min-height: 100vh;
+    padding: 20px;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 960px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0, 59, 122, 0.15);
+    overflow: hidden;
+}
+
+.header {
+    background: #4DBEDB;
+    padding: 40px 30px;
+    text-align: center;
+    position: relative;
+}
+
+.header-icon {
+    margin-bottom: 20px;
+}
+
+.icon-circle {
+    width: 200px;
+    height: 200px;
+    background: white;
+    border-radius: 50%;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.icon-circle img {
+    max-width: 80%;
+    height: auto;
+}
+
+.header h1 {
+    color: white;
+    font-size: 2rem;
+    font-weight: 600;
+    margin-top: 10px;
+}
+
+.main-content {
+    padding: 40px 30px;
+}
+
+.contact-card {
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-radius: 15px;
+    padding: 25px 30px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+.contact-card:hover {
+    border-color: #4DBEDB;
+    box-shadow: 0 5px 15px rgba(77, 190, 219, 0.2);
+    transform: translateY(-2px);
+}
+
+.contact-info {
+    flex: 1;
+}
+
+.contact-label {
+    color: #666;
+    font-size: 0.95rem;
+    margin-bottom: 5px;
+}
+
+.contact-name {
+    color: #003B7A;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.btn-call {
+    background: #8CC63F;
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    font-size: 1.1rem;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+}
+
+.btn-call:hover {
+    background: #6FA832;
+    transform: scale(1.05);
+}
+
+.phone-icon {
+    font-size: 1.2rem;
+}
+
+.footer {
+    background: #003B7A;
+    padding: 25px 30px;
+    text-align: center;
+}
+
+.back-button {
+    background: transparent;
+    color: white;
+    border: 2px solid white;
+    padding: 15px 40px;
+    font-size: 1.2rem;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.back-button:hover {
+    background: #8CC63F;
+    color: white;
+    border-color: #8CC63F;
+    transform: translateX(-5px);
+}
+
+.back-icon {
+    font-size: 1.4rem;
+    font-weight: bold;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
+    .header h1 {
+        font-size: 1.5rem;
+    }
+
+    .icon-circle {
+        width: 150px;
+        height: 150px;
+    }
+
+    .contact-card {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+    }
+
+    .contact-name {
+        font-size: 1.3rem;
+    }
+
+    .btn-call {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .back-button {
+        padding: 12px 30px;
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .header {
+        padding: 25px 20px;
+    }
+
+    .header h1 {
+        font-size: 1.3rem;
+    }
+
+    .main-content {
+        padding: 20px 15px;
+    }
+
+    .contact-card {
+        padding: 20px;
+    }
+
+    .contact-name {
+        font-size: 1.2rem;
+    }
+}
