@@ -64,26 +64,28 @@ body::before {
 .main-container {
     width: 100%;
     height: 100vh;
-    display: flex;
-    flex-direction: column;
     position: relative;
     z-index: 1;
-    padding: 20px;
+    overflow: hidden;
 }
 
 /* ==========================
    HEADER
 ========================== */
 .header {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 20px;
-    background: rgba(255,255,255,0.1);
-    backdrop-filter: blur(10px);
-    padding: 16px 24px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(20px);
+    padding: 20px 28px;
     border-radius: var(--radius-lg);
     box-shadow: var(--elevation-2);
+    z-index: 10;
 }
 
 .exercise-title {
@@ -94,32 +96,35 @@ body::before {
 }
 
 .rep-counter {
-    font-size: 3rem;
-    font-weight: 700;
+    font-size: 3.5rem;
+    font-weight: 800;
     color: var(--secondary);
-    text-shadow: 0 4px 12px rgba(102,187,106,0.5);
+    text-shadow: 0 4px 16px rgba(102,187,106,0.6);
     animation: pulse 0.3s ease;
+    line-height: 1;
 }
 
 .rep-target {
-    font-size: 1.2rem;
-    color: rgba(255,255,255,0.8);
+    font-size: 1.4rem;
+    color: rgba(255,255,255,0.9);
     margin-left: 8px;
+    font-weight: 600;
 }
 
 /* ==========================
    VIDEO CONTAINER
 ========================== */
 .video-container {
-    position: relative;
-    flex: 1;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     background: #000;
-    border-radius: var(--radius-xl);
-    overflow: hidden;
-    box-shadow: var(--elevation-3);
     display: flex;
     align-items: center;
     justify-content: center;
+    z-index: 1;
 }
 
 #input-video {
@@ -129,7 +134,7 @@ body::before {
 #output-canvas {
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    object-fit: cover; /* เปลี่ยนจาก contain เป็น cover เพื่อให้เต็มจอแบบวิดีโอคอล */
 }
 
 /* ==========================
@@ -195,6 +200,37 @@ body::before {
     animation: flashSuccess 0.6s ease forwards;
 }
 
+/* เอฟเฟกต์จอเขียวเต็มหน้าจอ */
+.video-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(102, 187, 106, 0);
+    pointer-events: none;
+    z-index: 5;
+    transition: background 0.3s ease;
+}
+
+.video-container.correct-pose::after {
+    animation: greenFlash 0.8s ease;
+}
+
+@keyframes greenFlash {
+    0% {
+        background: rgba(102, 187, 106, 0);
+    }
+    30% {
+        background: rgba(102, 187, 106, 0.4);
+        box-shadow: inset 0 0 100px rgba(102, 187, 106, 0.6);
+    }
+    100% {
+        background: rgba(102, 187, 106, 0);
+    }
+}
+
 @keyframes flashSuccess {
     0% {
         transform: translate(-50%, -50%) scale(0);
@@ -215,7 +251,7 @@ body::before {
         transform: scale(1);
     }
     50% {
-        transform: scale(1.1);
+        transform: scale(1.15);
     }
 }
 
@@ -223,78 +259,100 @@ body::before {
    STATUS MESSAGE
 ========================== */
 .status-message {
-    margin: 16px 0;
-    padding: 16px 24px;
-    background: rgba(255,255,255,0.15);
-    backdrop-filter: blur(10px);
-    border-radius: var(--radius-md);
+    position: absolute;
+    bottom: 140px;
+    left: 20px;
+    right: 20px;
+    padding: 20px 28px;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(20px);
+    border-radius: 25px;
     text-align: center;
-    font-size: 1.1rem;
+    font-size: 1.25rem;
     font-weight: 600;
     color: white;
-    box-shadow: var(--elevation-1);
+    box-shadow: var(--elevation-2);
     transition: var(--motion);
+    z-index: 10;
+    border: 2px solid rgba(255, 255, 255, 0.1);
 }
 
 .status-message.success {
-    background: rgba(102,187,106,0.3);
-    border: 2px solid var(--secondary);
+    background: rgba(102,187,106,0.85);
+    border: 2px solid rgba(102,187,106,1);
+    box-shadow: 0 8px 32px rgba(102,187,106,0.5);
 }
 
 .status-message.warning {
-    background: rgba(255,167,38,0.3);
-    border: 2px solid var(--warning);
+    background: rgba(255,167,38,0.85);
+    border: 2px solid rgba(255,167,38,1);
+    box-shadow: 0 8px 32px rgba(255,167,38,0.5);
 }
 
 .status-message.error {
-    background: rgba(229,62,62,0.3);
-    border: 2px solid var(--danger);
+    background: rgba(229,62,62,0.85);
+    border: 2px solid rgba(229,62,62,1);
+    box-shadow: 0 8px 32px rgba(229,62,62,0.5);
 }
 
 /* ==========================
    CONTROLS
 ========================== */
 .controls {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
     display: flex;
     gap: 16px;
-    margin-top: 16px;
+    z-index: 10;
 }
 
 .btn {
     flex: 1;
-    padding: 16px 32px;
+    padding: 18px 36px;
     border: none;
     border-radius: 30px;
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 600;
     font-family: 'Kanit', sans-serif;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 12px;
     transition: var(--motion);
     box-shadow: var(--elevation-2);
-    background: white;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
     color: var(--text-main);
+    min-height: 56px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.btn:active {
+    transform: scale(0.95);
 }
 
 .btn:hover {
     transform: translateY(-2px);
     box-shadow: var(--elevation-3);
+    background: rgba(255, 255, 255, 1);
 }
 
 .btn i {
-    font-size: 18px;
+    font-size: 20px;
 }
 
 .btn.danger {
-    background: var(--danger);
+    background: rgba(229, 62, 62, 0.95);
+    backdrop-filter: blur(10px);
     color: white;
 }
 
 .btn.danger:hover {
-    background: #C53030;
+    background: rgba(197, 48, 48, 1);
 }
 
 /* ==========================
@@ -388,36 +446,50 @@ body::before {
    MOBILE RESPONSIVE
 ========================== */
 @media (max-width: 768px) {
-    .main-container {
-        padding: 12px;
-    }
-
     .header {
-        padding: 12px 16px;
-        flex-direction: column;
-        gap: 12px;
-        text-align: center;
+        top: 16px;
+        left: 16px;
+        right: 16px;
+        padding: 16px 20px;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
     }
 
     .exercise-title {
-        font-size: 1.2rem;
+        font-size: 1.3rem;
+        width: 100%;
+        text-align: center;
+        margin-bottom: 4px;
     }
 
     .rep-counter {
-        font-size: 2.5rem;
+        font-size: 3rem;
     }
 
     .rep-target {
-        font-size: 1rem;
+        font-size: 1.2rem;
     }
 
     .status-message {
-        font-size: 1rem;
-        padding: 12px 16px;
+        font-size: 1.15rem;
+        padding: 18px 24px;
+        bottom: 120px;
+        left: 16px;
+        right: 16px;
     }
 
     .controls {
-        flex-direction: column;
+        bottom: 16px;
+        left: 16px;
+        right: 16px;
+        gap: 12px;
+    }
+
+    .btn {
+        padding: 18px 28px;
+        font-size: 16px;
+        min-height: 60px;
     }
 
     .complete-icon {
@@ -439,13 +511,48 @@ body::before {
 }
 
 @media (max-width: 480px) {
-    .video-container {
-        border-radius: var(--radius-lg);
+    .header {
+        top: 12px;
+        left: 12px;
+        right: 12px;
+        padding: 14px 18px;
+    }
+
+    .exercise-title {
+        font-size: 1.1rem;
+    }
+
+    .rep-counter {
+        font-size: 2.5rem;
+    }
+
+    .rep-target {
+        font-size: 1rem;
+    }
+
+    .status-message {
+        font-size: 1.05rem;
+        padding: 16px 20px;
+        bottom: 110px;
+        left: 12px;
+        right: 12px;
+    }
+
+    .controls {
+        bottom: 12px;
+        left: 12px;
+        right: 12px;
+        gap: 10px;
     }
 
     .btn {
-        padding: 14px 24px;
+        padding: 16px 24px;
         font-size: 15px;
+        min-height: 56px;
+    }
+
+    .btn i {
+        font-size: 18px;
     }
 }
 
@@ -453,23 +560,22 @@ body::before {
    LANDSCAPE MODE
 ========================== */
 @media (orientation: landscape) and (max-height: 600px) {
-    .main-container {
-        flex-direction: row;
-        gap: 16px;
-    }
-
     .header {
-        writing-mode: vertical-rl;
-        width: auto;
-        height: 100%;
+        padding: 8px 16px;
     }
 
-    .video-container {
-        flex: 1;
+    .status-message {
+        bottom: 80px;
+        padding: 10px 20px;
+        font-size: 0.95rem;
     }
 
     .controls {
-        writing-mode: vertical-rl;
-        flex-direction: row;
+        bottom: 12px;
+    }
+
+    .btn {
+        padding: 12px 24px;
+        font-size: 14px;
     }
 }
