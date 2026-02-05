@@ -10,6 +10,9 @@ class CanvasRenderer {
         this.ctx = canvasElement.getContext('2d');
         this.isInitialized = false;
         
+        // ⭐ เพิ่มระบบลูกศรแนะนำท่าทาง
+        this.arrowGuide = null;
+        
         this.setupCanvas();
     }
 
@@ -24,6 +27,13 @@ class CanvasRenderer {
                 this.canvas.width = this.video.videoWidth;
                 this.canvas.height = this.video.videoHeight;
                 this.isInitialized = true;
+                
+                // ⭐ สร้าง MovementArrowGuide หลังจาก canvas พร้อม
+                if (window.MovementArrowGuide) {
+                    this.arrowGuide = new MovementArrowGuide(this.canvas, this.ctx);
+                    console.log('✅ ระบบลูกศรแนะนำพร้อมใช้งาน');
+                }
+                
                 console.log(`✅ Canvas ขนาด: ${this.canvas.width}x${this.canvas.height}`);
             } else {
                 setTimeout(updateCanvasSize, 100);
@@ -61,6 +71,17 @@ class CanvasRenderer {
                 // ไฮไลท์จุดสำคัญ
                 if (exerciseAnalysis?.exercise) {
                     this.highlightExercisePoints(poseResults.poseLandmarks, exerciseAnalysis.exercise);
+                }
+                
+                // ⭐ วาดลูกศรแนะนำท่าทาง (เพิ่มใหม่)
+                if (this.arrowGuide && exerciseAnalysis?.exercise) {
+                    this.arrowGuide.drawExerciseArrows(
+                        poseResults.poseLandmarks,
+                        exerciseAnalysis.exercise,
+                        exerciseAnalysis.currentAngle || 0,
+                        exerciseAnalysis.targetAngle,
+                        exerciseAnalysis.currentSide || 'left'
+                    );
                 }
                 
                 // วาดข้อมูลการออกกำลังกาย
@@ -576,6 +597,5 @@ class CanvasRenderer {
 
 // ส่งออกคลาส
 window.CanvasRenderer = CanvasRenderer;
-
 
 console.log('✅ canvas-renderer-fixed.js โหลดเสร็จแล้ว');
