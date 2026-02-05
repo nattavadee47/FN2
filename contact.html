@@ -3,60 +3,144 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ติดต่อผู้เชี่ยวชาญ</title>
+    <title>ติดต่อผู้เชี่ยวชาญ - ระบบกายภาพบำบัด</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/contact.css">
 </head>
 <body>
-    <div class="container">
-        <header class="header">
-            <div class="header-icon">
-                <div class="icon-circle">
-                    <img src="https://via.placeholder.com/200x200/fff/666?text=Icon" alt="ติดต่อผู้เชี่ยวชาญ">
+    <!-- User Header -->
+    <div class="user-header">
+        <div class="user-header-content">
+            <div class="user-info">
+                <div class="user-avatar">
+                    <i class="fas fa-user-md"></i>
+                </div>
+                <div class="user-details">
+                    <span class="user-name" id="userName">ผู้ใช้งาน</span>
+                    <span class="user-status">เข้าสู่ระบบแล้ว</span>
                 </div>
             </div>
+            <div class="nav-buttons">
+                <button class="nav-btn" onclick="goBack()">
+                    <i class="fas fa-arrow-left"></i>
+                    กลับ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Header Section -->
+        <div class="header">
+            <div class="header-icon">
+                <i class="fas fa-user-doctor"></i>
+            </div>
             <h1>ติดต่อผู้เชี่ยวชาญ</h1>
-        </header>
+            <p class="subtitle">ทีมงานผู้เชี่ยวชาญพร้อมให้คำปรึกษา</p>
+        </div>
 
         <main class="main-content">
             <!-- ผู้ดูแลคนที่ 1 -->
             <div class="contact-card">
-                <div class="contact-info">
-                    <p class="contact-label">ผู้ดูแลระบบ</p>
-                    <h2 class="contact-name">ผศ. ดร. ชาลี แก้วรัตน์</h2>
+                <div class="contact-avatar">
+                    <i class="fas fa-user-tie"></i>
                 </div>
-                <a href="tel:" class="btn-call">
-                    <span class="phone-icon">📞</span> โทรเลย
-                </a>
+                <div class="contact-info">
+                    <span class="contact-label">ผู้ดูแลระบบ</span>
+                    <h2 class="contact-name">ผศ. ดร. ชาลี แก้วรัตน์</h2>
+                    <p class="contact-role">อาจารย์ที่ปรึกษาหลัก</p>
+                </div>
+                <div class="contact-actions">
+                    <a href="tel:" class="btn-call">
+                        <i class="fas fa-phone"></i>
+                        <span>โทรเลย</span>
+                    </a>
+                    <a href="mailto:" class="btn-email">
+                        <i class="fas fa-envelope"></i>
+                    </a>
+                </div>
             </div>
 
             <!-- ผู้ดูแลคนที่ 2 -->
             <div class="contact-card">
-                <div class="contact-info">
-                    <p class="contact-label">ผู้ดูแลระบบ</p>
-                    <h2 class="contact-name">นางสาวณัฐวดี อินอักษร</h2>
+                <div class="contact-avatar">
+                    <i class="fas fa-user-nurse"></i>
                 </div>
-                <a href="tel:" class="btn-call">
-                    <span class="phone-icon">📞</span> โทรเลย
-                </a>
+                <div class="contact-info">
+                    <span class="contact-label">ผู้ดูแลระบบ</span>
+                    <h2 class="contact-name">นางสาวณัฐวดี อินอักษร</h2>
+                    <p class="contact-role">นักพัฒนาระบบ</p>
+                </div>
+                <div class="contact-actions">
+                    <a href="tel:" class="btn-call">
+                        <i class="fas fa-phone"></i>
+                        <span>โทรเลย</span>
+                    </a>
+                    <a href="mailto:" class="btn-email">
+                        <i class="fas fa-envelope"></i>
+                    </a>
+                </div>
             </div>
 
             <!-- ผู้ดูแลคนที่ 3 -->
             <div class="contact-card">
-                <div class="contact-info">
-                    <p class="contact-label">ผู้ดูแลระบบ</p>
-                    <h2 class="contact-name">นางสาวกัลปังหา เอกทัตน์</h2>
+                <div class="contact-avatar">
+                    <i class="fas fa-user-nurse"></i>
                 </div>
-                <a href="tel:" class="btn-call">
-                    <span class="phone-icon">📞</span> โทรเลย
-                </a>
+                <div class="contact-info">
+                    <span class="contact-label">ผู้ดูแลระบบ</span>
+                    <h2 class="contact-name">นางสาวกัลปังหา เอกทัตน์</h2>
+                    <p class="contact-role">นักพัฒนาระบบ</p>
+                </div>
+                <div class="contact-actions">
+                    <a href="tel:" class="btn-call">
+                        <i class="fas fa-phone"></i>
+                        <span>โทรเลย</span>
+                    </a>
+                    <a href="mailto:" class="btn-email">
+                        <i class="fas fa-envelope"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Emergency Contact Card -->
+            <div class="emergency-card">
+                <div class="emergency-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="emergency-content">
+                    <h3>กรณีฉุกเฉิน</h3>
+                    <p>หากพบอาการผิดปกติหรือมีความเจ็บปวดรุนแรง<br>กรุณาติดต่อศูนย์การแพทย์ฉุกเฉินโดยทันที</p>
+                    <a href="tel:1669" class="btn-emergency">
+                        <i class="fas fa-ambulance"></i>
+                        โทร 1669
+                    </a>
+                </div>
             </div>
         </main>
-
-        <footer class="footer">
-            <button class="back-button" onclick="window.history.back()">
-                <span class="back-icon">‹‹</span> ย้อนกลับ
-            </button>
-        </footer>
     </div>
+
+    <script>
+        function goBack() {
+            window.location.href = 'dashboard.html';
+        }
+
+        // โหลดชื่อผู้ใช้
+        window.addEventListener('DOMContentLoaded', () => {
+            try {
+                const userDataStr = localStorage.getItem('userData') || sessionStorage.getItem('userData');
+                if (userDataStr) {
+                    const userData = JSON.parse(userDataStr);
+                    const userNameEl = document.getElementById('userName');
+                    if (userData.full_name && userNameEl) {
+                        userNameEl.textContent = userData.full_name;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading user data:', error);
+            }
+        });
+    </script>
 </body>
 </html>
