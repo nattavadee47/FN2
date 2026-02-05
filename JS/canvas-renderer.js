@@ -577,4 +577,5 @@ class CanvasRenderer {
 // ส่งออกคลาส
 window.CanvasRenderer = CanvasRenderer;
 
+
 console.log('✅ canvas-renderer-fixed.js โหลดเสร็จแล้ว');
