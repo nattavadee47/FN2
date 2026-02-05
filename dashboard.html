@@ -42,33 +42,6 @@
             <p class="subtitle">พร้อมเริ่มการฟื้นฟูสมรรถภาพวันนี้แล้วหรือยัง</p>
         </div>
 
-        <!-- Search Bar -->
-        <div class="search-container">
-            <div class="search-bar">
-                <i class="fas fa-search"></i>
-                <input type="text" placeholder="ค้นหาท่าการฟื้นฟู...">
-            </div>
-        </div>
-
-        <!-- Featured Banner -->
-        <div class="featured-banner">
-            <div class="banner-content">
-                <div class="banner-text">
-                    <h2>เริ่มต้นการฟื้นฟู</h2>
-                    <p>พร้อมที่จะเริ่มการบำบัดครั้งแรกของคุณแล้ว</p>
-                    <button class="banner-btn" onclick="scrollToExercises()">
-                        <i class="fas fa-play-circle"></i>
-                        เริ่มเลย 30 นาที
-                    </button>
-                </div>
-                <div class="banner-illustration">
-                    <div class="illustration-person">
-                        <i class="fas fa-user-injured"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Section Title -->
         <h2 class="section-title">ท่าการฟื้นฟูสำหรับคุณ</h2>
 
@@ -165,7 +138,6 @@
     </div>
 
     <!-- Custom JavaScript -->
-    <script src="js/dashboard.js"></script>
     <script>
         function selectExercise(exerciseType) {
             // แสดง loading
@@ -184,8 +156,32 @@
             });
         }
 
-        // Search functionality
+        function exitSystem() {
+            if (confirm('คุณต้องการออกจากระบบหรือไม่?')) {
+                // ✅ ลบข้อมูลทั้งหมด
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                // แสดง loading
+                const loadingOverlay = document.getElementById('loadingOverlay');
+                if (loadingOverlay) {
+                    loadingOverlay.classList.remove('hidden');
+                    const loadingText = loadingOverlay.querySelector('p');
+                    if (loadingText) {
+                        loadingText.textContent = 'กำลังออกจากระบบ...';
+                    }
+                }
+                
+                // ✅ ไปหน้า login
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 1000);
+            }
+        }
+
+        // ✅ แก้ไข Search functionality - เพิ่ม null check
         const searchInput = document.querySelector('.search-bar input');
+        
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
                 const searchTerm = e.target.value.toLowerCase();
@@ -201,6 +197,27 @@
                 });
             });
         }
+        
+        // ✅ โหลดชื่อผู้ใช้จาก localStorage/sessionStorage
+        window.addEventListener('DOMContentLoaded', () => {
+            try {
+                const userDataStr = localStorage.getItem('userData') || sessionStorage.getItem('userData');
+                if (userDataStr) {
+                    const userData = JSON.parse(userDataStr);
+                    
+                    // อัพเดทชื่อผู้ใช้
+                    const userNameEl = document.getElementById('userName');
+                    const greetingNameEl = document.getElementById('greetingName');
+                    
+                    if (userData.full_name) {
+                        if (userNameEl) userNameEl.textContent = userData.full_name;
+                        if (greetingNameEl) greetingNameEl.textContent = userData.full_name;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading user data:', error);
+            }
+        });
     </script>
 </body>
 </html>
