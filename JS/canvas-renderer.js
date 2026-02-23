@@ -55,7 +55,11 @@ class CanvasRenderer {
       swayZoneGap: 18,
       swayZoneBorder: "rgba(255,255,255,0.85)",
       swayZoneFill: "rgba(255,255,255,0.10)",
-    };
+      arrowSize: 70,
+      arrowColor: "rgba(255, 214, 0, 0.95)", // เหลืองชัด
+      arrowStroke: "rgba(0,0,0,0.8)",
+      arrowStrokeW: 6,
+};
 
     this.setupCanvas();
   }
@@ -117,7 +121,7 @@ class CanvasRenderer {
         analysis.holdProgress || 0
       );
     }
-
+    this.drawDirectionArrow(analysis);
     // 5) HUD ข้อความสั้น/ใหญ่
     this.drawHUD(analysis);
   }
@@ -337,6 +341,47 @@ class CanvasRenderer {
 
     ctx.restore();
   }
+  drawDirectionArrow(analysis) {
+  if (!analysis?.targetAngle) return;
+
+  const ctx = this.ctx;
+  const val = analysis.currentAngle || 0;
+  const min = analysis.targetAngle.min ?? 0;
+  const max = analysis.targetAngle.max ?? 0;
+
+  let direction = null;
+
+  if (val < min) direction = "up";
+  else if (val > max) direction = "down";
+
+  if (!direction) return;
+
+  const cx = this.canvas.width / 2;
+  const cy = this.canvas.height - 160;
+  const size = this.UI.arrowSize;
+
+  ctx.save();
+  ctx.fillStyle = this.UI.arrowColor;
+  ctx.strokeStyle = this.UI.arrowStroke;
+  ctx.lineWidth = this.UI.arrowStrokeW;
+
+  ctx.beginPath();
+
+  if (direction === "up") {
+    ctx.moveTo(cx, cy - size);
+    ctx.lineTo(cx - size / 2, cy);
+    ctx.lineTo(cx + size / 2, cy);
+  } else if (direction === "down") {
+    ctx.moveTo(cx, cy + size);
+    ctx.lineTo(cx - size / 2, cy);
+    ctx.lineTo(cx + size / 2, cy);
+  }
+
+  ctx.closePath();
+  ctx.stroke();
+  ctx.fill();
+  ctx.restore();
+}
 
   // ---------- HUD ----------
   drawHUD(analysis) {
@@ -378,7 +423,7 @@ class CanvasRenderer {
 
     // บรรทัดสอง: สถานะ + ค่า/เป้า (ยังคงอ่านง่าย)
     const range = target ? `${target.min ?? 0}-${target.max ?? 0}` : "-";
-    const line2 = `${status}  |  ค่าปัจจุบัน: ${val}  (เป้า ${range})`;
+    const line2 = `${status}`;
     this.outlineText(line2, this.UI.hudX + 12, this.UI.hudY + 76);
 
     ctx.restore();
