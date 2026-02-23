@@ -2,6 +2,11 @@
 // ระบบตรวจจับท่าทางที่แก้ไขใหม่ทั้งหมด
 // potex-fixed.js
 // ========================================
+const API_CONFIG = {
+    RENDER_URL: 'https://bn1-1.onrender.com',
+    LOCAL_URL: 'http://localhost:4000',
+    TIMEOUT: 10000
+};
 
 // Global Variables
 let physioApp = null;
@@ -9,9 +14,9 @@ let canvasRenderer = null;
 let sessionStartTime = null;
 let currentReps = 0;
 let targetReps = 10;
+let totalAccuracy = 0;
+let repAccuracyCount = 0;
 let isComplete = false;
-let currentExerciseId = null;        // เก็บ exercise_id (1, 2, 3, ...)
-let currentExerciseName = null;       // เก็บชื่อท่าภาษาไทย
 // DOM Elements
 const elements = {
     video: document.getElementById('input-video'),
@@ -34,39 +39,6 @@ const POSE_CONNECTIONS = [
     [23, 25], [25, 27], [27, 29], [27, 31],
     [24, 26], [26, 28], [28, 30], [28, 32]
 ];
-
-const EXERCISE_ID_MAP = {
-    'arm-raise-forward': {
-        id: 1,
-        name_th: 'ท่ายกแขนไปข้างหน้า',
-        name_en: 'Arm Raise Forward'
-    },
-    'leg-extension': {
-        id: 2,
-        name_th: 'ท่าเหยียดเข่าตรง',
-        name_en: 'Leg Extension'
-    },
-    'trunk-sway': {
-        id: 3,
-        name_th: 'ท่าโยกลำตัวซ้าย-ขวา',
-        name_en: 'Trunk Sway'
-    },
-    'neck-tilt': {
-        id: 4,
-        name_th: 'ท่าเอียงศีรษะข้าง',
-        name_en: 'Neck Tilt'
-    },
-    'neck-rotation': {
-        id: 5,
-        name_th: 'ท่าหมุนศีรษะซ้าย-ขวา',
-        name_en: 'Neck Rotation'
-    },
-    'shoulder-abduction': {
-        id: 6,
-        name_th: 'ท่ายกแขนข้าง',
-        name_en: 'Shoulder Abduction'
-    }
-};
 
 // การตั้งค่าท่าทางที่แก้ไขใหม่
 const EXERCISE_CONFIG = {
@@ -100,7 +72,7 @@ const EXERCISE_CONFIG = {
             ankle: [27, 28]
         },
         requiredVisibility: 0.6,
-        holdDuration: 1000,
+        holdDuration: 5000,
         alternating: true, // เพิ่มการสลับข้าง
         feedback: {
             tooLow: 'เหยียดเข่าให้มากขึ้น ⬆️',
@@ -112,7 +84,7 @@ const EXERCISE_CONFIG = {
     },
     'trunk-sway': {
         name: 'ท่าโยกลำตัวซ้าย-ขวา',
-        targetAngle: { min: 50, max: 500 }, // ลดระยะห่างขั้นต่ำ เพิ่มช่วงให้กว้าง
+        targetAngle: { min: 18, max: 32 }, // ลดระยะห่างขั้นต่ำ เพิ่มช่วงให้กว้าง
         restAngle: { min: 0, max: 100 }, // เพิ่มช่วงพักให้กว้าง
         landmarks: {
             shoulder: [11, 12],
@@ -175,9 +147,11 @@ class ImprovedPoseDetector {
             currentSide: 'left', // เพิ่มตัวแปรเก็บข้างปัจจุบัน
             accuracy: 0,
             consecutiveGoodFrames: 0,
-            requiredGoodFrames: 20, // ลดจาก 30 เหลือ 20
+            requiredGoodFrames: 45, 
             angleHistory: [],
-            repCounted: false
+            repCounted: false,
+            lastCount: 0   // เพิ่มตัวนี้
+
         };
     }
 
@@ -191,13 +165,14 @@ class ImprovedPoseDetector {
                 locateFile: file => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
             });
 
-            this.pose.setOptions({
-                modelComplexity: 1,
-                smoothLandmarks: true,
-                enableSegmentation: false,
-                minDetectionConfidence: 0.5,
-                minTrackingConfidence: 0.5
-            });
+           this.pose.setOptions({
+            modelComplexity: StrokeConfig.CONFIG.MEDIAPIPE.MODEL_COMPLEXITY,
+            smoothLandmarks: StrokeConfig.CONFIG.MEDIAPIPE.SMOOTH_LANDMARKS,
+            enableSegmentation: StrokeConfig.CONFIG.MEDIAPIPE.ENABLE_SEGMENTATION,
+            minDetectionConfidence: StrokeConfig.CONFIG.MEDIAPIPE.MIN_DETECTION_CONFIDENCE,
+            minTrackingConfidence: StrokeConfig.CONFIG.MEDIAPIPE.MIN_TRACKING_CONFIDENCE,
+        });
+
 
             this.pose.onResults(results => this.onResults(results));
             await this.setupCamera();
@@ -289,36 +264,23 @@ class ImprovedPoseDetector {
     }
 
     selectExercise(exerciseId) {
-    this.currentExercise = exerciseId;
-    this.config = EXERCISE_CONFIG[exerciseId];
-    
-    if (!this.config) {
-        console.error('❌ ไม่พบการตั้งค่าสำหรับท่า:', exerciseId);
-        return false;
+        this.currentExercise = exerciseId;
+        this.config = EXERCISE_CONFIG[exerciseId];
+        
+        if (!this.config) {
+            console.error('❌ ไม่พบการตั้งค่าสำหรับท่า:', exerciseId);
+            return false;
+        }
+
+        // สร้าง Kalman Filter
+        if (window.KalmanFilter) {
+            this.kalmanFilter = new window.KalmanFilter(0.01, 0.1);
+        }
+
+        console.log('✅ เลือกท่า:', this.config.name);
+        return true;
     }
 
-    // ✅ เพิ่มส่วนนี้: เก็บ exercise_id และชื่อท่า
-    const exerciseInfo = EXERCISE_ID_MAP[exerciseId];
-    if (exerciseInfo) {
-        currentExerciseId = exerciseInfo.id;
-        currentExerciseName = exerciseInfo.name_th;
-        console.log('✅ เก็บข้อมูลท่า:', {
-            id: currentExerciseId,
-            name: currentExerciseName,
-            key: exerciseId
-        });
-    } else {
-        console.warn('⚠️ ไม่พบ exercise_id mapping สำหรับ:', exerciseId);
-    }
-
-    // สร้าง Kalman Filter
-    if (window.KalmanFilter) {
-        this.kalmanFilter = new window.KalmanFilter(0.01, 0.1);
-    }
-
-    console.log('✅ เลือกท่า:', this.config.name);
-    return true;
-}
     onResults(results) {
         if (!this.isRunning || !results.poseLandmarks) return;
 
@@ -625,78 +587,103 @@ class ImprovedPoseDetector {
     }
 
     // ⭐ ตรวจจับการเคลื่อนไหว - รองรับการสลับข้าง
-    detectMovement() {
-        const angle = this.exerciseState.smoothedAngle;
-        const target = this.config.targetAngle;
-        const rest = this.config.restAngle;
+   detectMovement() {
+  const angle = this.exerciseState.smoothedAngle;
+  const target = this.config.targetAngle;
+  const rest = this.config.restAngle;
 
-        // ตรวจสอบว่าอยู่ในช่วงเป้าหมาย
-        const inTargetRange = angle >= target.min && angle <= target.max;
-        const inRestRange = angle >= rest.min && angle <= rest.max;
+  const inTargetRange = angle >= target.min && angle <= target.max;
+  const inRestRange = angle >= rest.min && angle <= rest.max;
 
-        if (inTargetRange) {
-            this.exerciseState.consecutiveGoodFrames++;
-            
-            // เริ่มนับเวลาคงท่า
-            if (!this.exerciseState.isHolding) {
-                this.exerciseState.isHolding = true;
-                this.exerciseState.holdStartTime = Date.now();
-                this.exerciseState.phase = 'holding';
-            }
+  if (inTargetRange) {
+    this.exerciseState.consecutiveGoodFrames++;
 
-            // คำนวณความคืบหน้าการคงท่า
-            if (this.exerciseState.holdStartTime) {
-                const holdTime = Date.now() - this.exerciseState.holdStartTime;
-                this.exerciseState.holdProgress = Math.min(100, 
-                    (holdTime / this.config.holdDuration) * 100
-                );
+    // ✅ (A) เข้าช่วงเป้าหมายครั้งแรก → บอกให้คงท่า (ไม่พูดรัว)
+    if (!this.exerciseState.isHolding) {
+      speakCooldown(this, "enterTarget", "ดีมาก คงท่าไว้", 1800);
 
-                // นับ rep เมื่อคงท่าครบเวลา
-                if (holdTime >= this.config.holdDuration && !this.exerciseState.repCounted) {
-                    this.exerciseState.repCounted = true;
-                    
-                    // ถ้าเป็นท่าที่ต้องสลับข้าง
-                    if (this.config.alternating) {
-                        // นับครั้งทันทีไม่ว่าจะข้างไหน
-                        this.incrementRep();
-                        
-                        // สลับข้างสำหรับครั้งถัดไป
-                        if (this.exerciseState.currentSide === 'left') {
-                            this.exerciseState.currentSide = 'right';
-                        } else {
-                            this.exerciseState.currentSide = 'left';
-                        }
-                    } else {
-                        // ท่าปกติ ไม่ต้องสลับ
-                        this.incrementRep();
-                    }
-                }
-            }
+      this.exerciseState.isHolding = true;
+      this.exerciseState.holdStartTime = Date.now();
+      this.exerciseState.phase = "holding";
+    }
 
-            // คำนวณความแม่นยำ
-            const targetCenter = (target.min + target.max) / 2;
-            const deviation = Math.abs(angle - targetCenter);
-            const maxDeviation = (target.max - target.min) / 2;
-            this.exerciseState.accuracy = Math.max(0, 100 - (deviation / maxDeviation) * 100);
+    if (this.exerciseState.holdStartTime) {
+      const holdTime = Date.now() - this.exerciseState.holdStartTime;
+      // ⭐ นับวินาที 1-10
+        const seconds = Math.floor(holdTime / 1000);
+
+        if (seconds > this.exerciseState.lastCount) {
+        this.exerciseState.lastCount = seconds;
+
+        if (seconds <= 5) {
+            speak(seconds.toString());
+        }
+        }
+
+      this.exerciseState.holdProgress = Math.min(
+        100,
+        (holdTime / this.config.holdDuration) * 100
+      );
+
+      if (holdTime >= this.config.holdDuration && !this.exerciseState.repCounted) {
+        this.exerciseState.repCounted = true;
+
+        if (this.config.alternating) {
+          this.incrementRep();
+
+          // ✅ (B) หลังนับเสร็จ → สลับข้าง + พูดสลับข้าง
+          if (this.exerciseState.currentSide === "left") {
+            this.exerciseState.currentSide = "right";
+            speakCooldown(this, "switchSide", "สลับข้างขวา", 1200);
+          } else {
+            this.exerciseState.currentSide = "left";
+            speakCooldown(this, "switchSide", "สลับข้างซ้าย", 1200);
+          }
 
         } else {
-            // ไม่อยู่ในช่วงเป้าหมาย - รีเซ็ตการคงท่า
-            if (this.exerciseState.isHolding) {
-                this.exerciseState.isHolding = false;
-                this.exerciseState.holdStartTime = null;
-                this.exerciseState.holdProgress = 0;
-            }
-
-            // ถ้ากลับมาที่ท่าพัก - รีเซ็ตเพื่อเตรียมนับครั้งต่อไป
-            if (inRestRange && this.exerciseState.repCounted) {
-                this.exerciseState.repCounted = false;
-                this.exerciseState.consecutiveGoodFrames = 0;
-                this.exerciseState.phase = 'rest';
-            } else if (!inRestRange) {
-                this.exerciseState.phase = 'moving';
-            }
+          this.incrementRep();
         }
+      }
     }
+
+    // คำนวณความแม่นยำ
+    const targetCenter = (target.min + target.max) / 2;
+    const deviation = Math.abs(angle - targetCenter);
+    const maxDeviation = (target.max - target.min) / 2;
+    this.exerciseState.accuracy = Math.max(0, 100 - (deviation / maxDeviation) * 100);
+
+  } else {
+    // ✅ (C) ยังไม่ถึง/เกินเป้า → พูดแนะนำทิศทางแบบมีคูลดาวน์
+    if (!inRestRange) {
+      if (angle < target.min - 10) {
+        speakCooldown(this, "tooLow", "ยกให้สูงขึ้น", 1600);
+      } else if (angle > target.max + 10) {
+        speakCooldown(this, "tooHigh", "ลดลงนิดนึง", 1600);
+      }
+    }
+
+    // รีเซ็ตการคงท่า
+    if (this.exerciseState.isHolding) {
+      this.exerciseState.isHolding = false;
+      this.exerciseState.holdStartTime = null;
+      this.exerciseState.holdProgress = 0;
+      
+
+    }
+
+    if (inRestRange && this.exerciseState.repCounted) {
+      this.exerciseState.repCounted = false;
+      this.exerciseState.consecutiveGoodFrames = 0;
+      this.exerciseState.phase = "rest";
+
+      // ✅ (D) กลับท่าพัก → พูดเตรียมพร้อม (ไม่บังคับ)
+      speakCooldown(this, "backToRest", "เตรียมพร้อม", 2000);
+
+    } else if (!inRestRange) {
+      this.exerciseState.phase = "moving";
+    }
+  }
+}
 
     getStatusMessage() {
         if (!this.config) return '';
@@ -726,6 +713,10 @@ class ImprovedPoseDetector {
 
     incrementRep() {
         currentReps++;
+
+        totalAccuracy += this.exerciseState.accuracy;   // ✅ เพิ่ม
+        repAccuracyCount++;                             // ✅ เพิ่ม
+
         updateRepCounter();
         showSuccessFlash();
         playSuccessSound();
@@ -800,187 +791,117 @@ function playSuccessSound() {
     }
 }
 
+// พูดแบบมีคูลดาวน์: กันพูดรัว
+function speakCooldown(detector, key, text, cooldownMs = 1800) {
+  const now = Date.now();
+  detector.exerciseState._voice = detector.exerciseState._voice || {};
+  const last = detector.exerciseState._voice[key] || 0;
+
+  if (now - last >= cooldownMs) {
+    detector.exerciseState._voice[key] = now;
+    speak(text);
+  }
+}
+
+function speak(text) {
+    if (!('speechSynthesis' in window)) return;
+
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'th-TH';
+    utter.rate = 0.9;   // ช้าหน่อยสำหรับผู้สูงอายุ
+    utter.pitch = 1;
+
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utter);
+}
+
+
 // ===== SAVE TO DATABASE =====
-async function saveToDatabase(sessionData) {
+async function saveToDatabase() {
     try {
-        console.log('💾 กำลังบันทึกข้อมูลลงฐานข้อมูล...');
-        
-        // 🔐 ดึง Token และ User Data
-        const token = sessionStorage.getItem('token') || localStorage.getItem('token');
-        const userDataStr = sessionStorage.getItem('userData') || localStorage.getItem('userData');
-        
-        if (!token || !userDataStr) {
-            console.warn('⚠️ ไม่พบ token หรือ userData - ข้ามการบันทึกฐานข้อมูล');
-            return { success: false, error: 'No authentication' };
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+        if (!token) {
+            console.error('No token found');
+            return false;   // ✅ เพิ่ม
         }
 
-        const userData = JSON.parse(userDataStr);
-        console.log('👤 User ID:', userData.user_id);
+        const duration = Math.floor((Date.now() - sessionStartTime) / 1000);
 
-        // ✅ คำนวณ reps ซ้าย-ขวา
-        const totalReps = sessionData.reps || 0;
-        const repsLeft = Math.floor(totalReps / 2);
-        const repsRight = Math.ceil(totalReps / 2);
-
-        // ✅ สร้างข้อมูลตามโครงสร้าง Exercise_Sessions table
-        const postData = {
-            patient_id: userData.user_id,
-            plan_id: 1,                                    // default plan
-            exercise_id: sessionData.exercise_id,          // ต้องมีค่านี้
-            session_date: new Date().toISOString(),
-            actual_reps_left: repsLeft,
-            actual_reps_right: repsRight,
-            actual_reps: totalReps,
+        const payload = {
+            exercise_id: getExerciseIdFromName(),
+            actual_reps: currentReps,
             actual_sets: 1,
-            accuracy_percent: parseFloat(sessionData.accuracy) || 0,
-            duration_seconds: parseInt(sessionData.duration_seconds) || 0,
-            notes: `ทำครบ ${totalReps} ครั้ง ด้วยความแม่นยำ ${sessionData.accuracy}%`,
-            completed: true
+            accuracy_percent: physioApp?.exerciseState?.accuracy || 0,
+            duration_seconds: duration
         };
 
-        console.log('📤 ข้อมูลที่จะส่ง:', postData);
+        console.log("📤 Sending to API:", payload);
 
-        const response = await fetch('https://bn1-1.onrender.com/api/exercise-sessions', {
+        const response = await fetch(`${API_CONFIG.BASE_URL}/api/exercise-sessions`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify(postData)
+            body: JSON.stringify(payload)
         });
 
-        console.log('📡 Response status:', response.status);
-
-        if (response.ok) {
-            const result = await response.json();
-            console.log('✅ บันทึกฐานข้อมูลสำเร็จ:', result);
-            return { success: true, data: result };
-        } else {
-            const errorData = await response.json();
-            console.error('❌ API Error:', errorData);
-            return { success: false, error: errorData };
+        if (!response.ok) {
+            console.error("Server error");
+            return false;   // ✅ เพิ่ม
         }
 
+        console.log("✅ Saved successfully");
+        return true;        // ✅ เพิ่ม
+
     } catch (error) {
-        console.error('❌ Error saving to database:', error);
-        return { success: false, error: error.message };
+        console.error("❌ Save error:", error);
+        return false;       // ✅ เพิ่ม
     }
 }
+function getExerciseIdFromName() {
+    const map = {
+        'arm-raise-forward': 60001,
+        'leg-extension': 60002,
+        'trunk-sway': 60003,
+        'neck-tilt': 60004
+    };
 
+    return map[physioApp.currentExercise] || 60001;
+}
 
-function completeExercise() {
+async function completeExercise() {
+    if (isComplete) return;
     isComplete = true;
-    
-    // แสดง overlay
+
+    const currentDate = new Date();
+
+    const sessionData = {
+        exercise: physioApp.currentExercise,
+        reps: currentReps,
+        accuracy: repAccuracyCount > 0 
+            ? Math.round(totalAccuracy / repAccuracyCount) 
+            : 0,
+        duration_seconds: sessionStartTime 
+            ? Math.floor((Date.now() - sessionStartTime) / 1000) 
+            : 0,
+        completedAt: currentDate.toISOString()
+    };
+
+    try {
+        await saveToDatabase(sessionData);
+        console.log("✅ บันทึกฐานข้อมูลสำเร็จ");
+    } catch (err) {
+        console.error("❌ บันทึก DB ล้มเหลว", err);
+    }
+
     if (elements.completeOverlay) {
         elements.completeOverlay.classList.add('show');
     }
-    
-    // 📊 คำนวณข้อมูล
-    const sessionDuration = sessionStartTime ? Math.floor((Date.now() - sessionStartTime) / 1000) : 0;
-    const avgAccuracy = Math.round(physioApp.exerciseState.accuracy);
-    
-    console.log('🎉 การออกกำลังเสร็จสิ้น!');
-    console.log('📊 สถิติ:', {
-        exercise_id: currentExerciseId,
-        exercise_name: currentExerciseName,
-        exercise_key: physioApp.currentExercise,
-        reps: currentReps,
-        accuracy: avgAccuracy,
-        duration: sessionDuration
-    });
 
-    // ⚠️ ตรวจสอบว่ามี exercise_id หรือไม่
-    if (!currentExerciseId) {
-        console.error('❌ ไม่พบ currentExerciseId - ไม่สามารถบันทึกฐานข้อมูลได้!');
-        alert('เกิดข้อผิดพลาด: ไม่พบข้อมูล exercise_id');
-    }
-
-    // 💾 เตรียมข้อมูลสำหรับ localStorage
-    const localStorageData = {
-        exercise: physioApp.currentExercise,
-        exerciseName: currentExerciseName || physioApp.config.name,
-        reps: currentReps,
-        targetReps: targetReps,
-        accuracy: avgAccuracy,
-        sessionStats: {
-            exerciseTime: sessionDuration,
-            bestAccuracy: avgAccuracy,
-            improvementRate: (Math.random() * 10 - 5).toFixed(1)
-        },
-        date: new Date().toLocaleDateString('th-TH', { 
-            day: '2-digit', 
-            month: '2-digit', 
-            year: 'numeric' 
-        }),
-        time: new Date().toLocaleTimeString('th-TH', { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-        }),
-        completedAt: new Date().toISOString(),
-        success: true
-    };
-    
-    // บันทึก localStorage
-    localStorage.setItem('lastSessionData', JSON.stringify(localStorageData));
-    
-    let exerciseHistory = [];
-    const existingHistory = localStorage.getItem('exerciseHistory');
-    if (existingHistory) {
-        try {
-            exerciseHistory = JSON.parse(existingHistory);
-        } catch (e) {
-            exerciseHistory = [];
-        }
-    }
-    
-    exerciseHistory.push(localStorageData);
-    
-    if (exerciseHistory.length > 50) {
-        exerciseHistory = exerciseHistory.slice(-50);
-    }
-    
-    localStorage.setItem('exerciseHistory', JSON.stringify(exerciseHistory));
-    console.log('💾 บันทึก localStorage สำเร็จ');
-
-    // ✅ เตรียมข้อมูลสำหรับฐานข้อมูล
-    const databaseData = {
-        exercise_id: currentExerciseId,           // ✅ ใช้ตัวแปร global
-        exercise_name: currentExerciseName,       // ✅ ใช้ตัวแปร global
-        reps: currentReps,
-        accuracy: avgAccuracy,
-        duration_seconds: sessionDuration
-    };
-
-    console.log('📤 กำลังส่งข้อมูลไปยัง API:', databaseData);
-
-    // ✅ บันทึกลงฐานข้อมูล (async)
-    saveToDatabase(databaseData).then(result => {
-        if (result.success) {
-            console.log('✅ บันทึกฐานข้อมูลสำเร็จ!');
-            if (typeof speak === 'function') {
-                speak(`บันทึกสำเร็จ! คุณทำได้ ${currentReps} ครั้ง`);
-            }
-        } else {
-            console.warn('⚠️ บันทึกฐานข้อมูลล้มเหลว:', result.error);
-            console.log('💾 แต่ข้อมูลอยู่ใน localStorage แล้ว');
-            if (typeof speak === 'function') {
-                speak(`ยินดีด้วย! คุณทำได้ ${currentReps} ครั้ง`);
-            }
-        }
-    }).catch(error => {
-        console.error('❌ Exception in saveToDatabase:', error);
-    });
-    
-    // เล่นเสียง
-    if (typeof playSuccessSound === 'function') {
-        playSuccessSound();
-    }
-    
-    // Auto redirect หลัง 5 วินาที
     setTimeout(() => {
         window.location.href = 'report.html';
-    }, 5000);
+    }, 3000);
 }
 
 function goBack() {
@@ -1162,46 +1083,6 @@ function showCorrectPoseWithFeedback() {
     }
 }
 
-// ============================================
-// ตัวอย่างการใช้งานจริง
-// ============================================
-
-/*
-// วางโค้ดนี้ในไฟล์ potex.js หรือไฟล์หลักของคุณ
-
-let repCount = 0;
-let lastPoseCorrect = false;
-
-function updatePoseDetection(landmarks) {
-    // ตรวจสอบว่าท่าถูกต้องหรือไม่
-    const isCorrect = validatePose(landmarks);
-    
-    // ถ้าท่าถูกต้องและยังไม่นับ
-    if (isCorrect && !lastPoseCorrect) {
-        repCount++;
-        document.getElementById('rep-counter').textContent = repCount;
-        
-        // แสดงเอฟเฟกต์จอเขียว + haptic feedback
-        showCorrectPoseWithFeedback();
-        
-        // ตรวจสอบว่าครบเป้าหมายหรือยัง
-        const target = parseInt(document.getElementById('target-reps').textContent);
-        if (repCount >= target) {
-            showCompleteOverlay();
-        }
-    }
-    
-    lastPoseCorrect = isCorrect;
-}
-*/
-function debugExerciseInfo() {
-    console.log('🔍 Debug Exercise Info:');
-    console.log('  currentExerciseId:', currentExerciseId);
-    console.log('  currentExerciseName:', currentExerciseName);
-    console.log('  physioApp.currentExercise:', physioApp?.currentExercise);
-    console.log('  currentReps:', currentReps);
-    console.log('  targetReps:', targetReps);
-}
 console.log('Green flash effect loaded! 🟢');
 console.log('Use showCorrectPoseEffect() to trigger green screen flash');
 
