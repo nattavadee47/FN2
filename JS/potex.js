@@ -5,6 +5,7 @@
 const API_CONFIG = {
     RENDER_URL: 'https://bn1-1.onrender.com',
     LOCAL_URL: 'http://localhost:4000',
+    BASE_URL: 'https://bn1-1.onrender.com',  // ✅ แก้ไข: เพิ่ม BASE_URL ให้ตรงกับที่ใช้ใน saveToDatabase
     TIMEOUT: 10000
 };
 
@@ -827,12 +828,20 @@ async function saveToDatabase() {
 
         const duration = Math.floor((Date.now() - sessionStartTime) / 1000);
 
+        // ✅ แก้ไข: ชื่อ field ให้ตรงกับที่ server.js รับ
+        const leftCount  = Math.ceil(currentReps / 2);
+        const rightCount = Math.floor(currentReps / 2);
+
         const payload = {
-            exercise_id: getExerciseIdFromName(),
-            actual_reps: currentReps,
-            actual_sets: 1,
-            accuracy_percent: physioApp?.exerciseState?.accuracy || 0,
-            duration_seconds: duration
+            exercise_id:      getExerciseIdFromName(),
+            exercise_name:    physioApp?.config?.name || 'ท่าการฝึก',
+            exercise_type:    physioApp?.currentExercise || 'unknown',
+            actual_reps:      currentReps,
+            actual_sets:      1,
+            accuracy:         physioApp?.exerciseState?.accuracy || 0,
+            session_duration: duration,
+            left_count:       leftCount,
+            right_count:      rightCount
         };
 
         console.log("📤 Sending to API:", payload);
