@@ -341,28 +341,39 @@ async function loadExerciseData() {
             
             // ✅ แปลงข้อมูลให้ตรงกับโครงสร้าง
             exerciseHistory = result.data.map(session => {
-                const leftReps = parseInt(session.actual_reps_left) || 0;
+                const leftReps  = parseInt(session.actual_reps_left)  || 0;
                 const rightReps = parseInt(session.actual_reps_right) || 0;
-                const totalReps = leftReps + rightReps;
-                
+                // ✅ ใช้ actual_reps จาก DB โดยตรง (server บันทึก totalReps ไว้แล้ว)
+                //    ถ้าไม่มีค่า ให้ fallback เป็น left + right
+                const totalReps = parseInt(session.actual_reps) || (leftReps + rightReps);
+
+                // ✅ server ส่งมาในชื่อ accuracy_percent ไม่ใช่ accuracy
+                const accuracy  = parseFloat(session.accuracy_percent) || 0;
+
                 console.log(`Session ${session.session_id}:`, {
                     left: leftReps,
                     right: rightReps,
                     total: totalReps,
+                    accuracy,
                     date: session.session_date
                 });
-                
+
                 return {
                     exercise: session.exercise_id,
-                    exerciseName: session.exercise_name_th || session.exercise_name_en || session.description || 'ท่ากายภาพ',
-                    actual_reps_left: leftReps,
+                    // ✅ ลำดับการหาชื่อ: exercise_name (computed) → name_th → name_en → notes → default
+                    exerciseName: session.exercise_name
+                                  || session.exercise_name_th
+                                  || session.exercise_name_en
+                                  || (session.notes ? session.notes.split(' - ')[0] : null)
+                                  || 'ท่ากายภาพ',
+                    actual_reps_left:  leftReps,
                     actual_reps_right: rightReps,
-                    actual_reps: totalReps,
-                    accuracy: parseFloat(session.accuracy_percent) || 0,
-                    duration_seconds: parseInt(session.duration_seconds) || 0,
-                    session_date: session.session_date,
-                    notes: session.notes || '',
-                    timestamp: new Date(session.session_date).getTime()
+                    actual_reps:       totalReps,
+                    accuracy:          accuracy,
+                    duration_seconds:  parseInt(session.duration_seconds) || 0,
+                    session_date:      session.session_date,
+                    notes:             session.notes || '',
+                    timestamp:         new Date(session.session_date).getTime()
                 };
             });
 
