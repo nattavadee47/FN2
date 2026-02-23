@@ -5,7 +5,7 @@
 const API_CONFIG = {
     RENDER_URL: 'https://bn1-1.onrender.com',
     LOCAL_URL: 'http://localhost:4000',
-    BASE_URL: 'https://bn1-1.onrender.com',  // ✅ แก้ไข: เพิ่ม BASE_URL ให้ตรงกับที่ใช้ใน saveToDatabase
+    BASE_URL: 'https://bn1-1.onrender.com',  // ✅ แก้ไข
     TIMEOUT: 10000
 };
 
@@ -822,26 +822,32 @@ async function saveToDatabase() {
     try {
         const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
         if (!token) {
-            console.error('No token found');
-            return false;   // ✅ เพิ่ม
+            console.error('❌ No token found');
+            return false;
+        }
+
+        if (!sessionStartTime) {
+            console.error('❌ sessionStartTime is null');
+            return false;
         }
 
         const duration = Math.floor((Date.now() - sessionStartTime) / 1000);
 
         // ✅ แก้ไข: ชื่อ field ให้ตรงกับที่ server.js รับ
-        const leftCount  = Math.ceil(currentReps / 2);
-        const rightCount = Math.floor(currentReps / 2);
+        const totalReps = currentReps;
+        const leftCount  = Math.ceil(totalReps / 2);
+        const rightCount = Math.floor(totalReps / 2);
 
         const payload = {
             exercise_id:      getExerciseIdFromName(),
             exercise_name:    physioApp?.config?.name || 'ท่าการฝึก',
             exercise_type:    physioApp?.currentExercise || 'unknown',
-            actual_reps:      currentReps,
+            actual_reps:      totalReps,
             actual_sets:      1,
-            accuracy:         physioApp?.exerciseState?.accuracy || 0,
-            session_duration: duration,
-            left_count:       leftCount,
-            right_count:      rightCount
+            accuracy:         Math.round(physioApp?.exerciseState?.accuracy || 0), // ✅ เปลี่ยนจาก accuracy_percent
+            session_duration: duration,   // ✅ เปลี่ยนจาก duration_seconds
+            left_count:       leftCount,  // ✅ เพิ่ม
+            right_count:      rightCount  // ✅ เพิ่ม
         };
 
         console.log("📤 Sending to API:", payload);
@@ -856,16 +862,18 @@ async function saveToDatabase() {
         });
 
         if (!response.ok) {
-            console.error("Server error");
-            return false;   // ✅ เพิ่ม
+            const errText = await response.text();
+            console.error("❌ Server error:", response.status, errText);
+            return false;
         }
 
-        console.log("✅ Saved successfully");
-        return true;        // ✅ เพิ่ม
+        const result = await response.json();
+        console.log("✅ Saved successfully:", result);
+        return true;
 
     } catch (error) {
         console.error("❌ Save error:", error);
-        return false;       // ✅ เพิ่ม
+        return false;
     }
 }
 function getExerciseIdFromName() {
