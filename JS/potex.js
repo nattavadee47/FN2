@@ -66,7 +66,7 @@ const EXERCISE_CONFIG = {
     'leg-extension': {
         name: 'ท่าเหยียดเข่าตรง',
         targetAngle: { min: 160, max: 180 },
-        restAngle: { min: 70, max: 110 },
+        restAngle: { min: 60, max: 120 },  // ✅ ขยายช่วงพัก
         landmarks: {
             hip: [23, 24],
             knee: [25, 26],
@@ -74,7 +74,7 @@ const EXERCISE_CONFIG = {
         },
         requiredVisibility: 0.6,
         holdDuration: 5000,
-        alternating: true, // เพิ่มการสลับข้าง
+        alternating: true,
         feedback: {
             tooLow: 'เหยียดเข่าให้มากขึ้น ⬆️',
             tooHigh: 'เข่าตรงแล้ว ดีมาก ✅',
@@ -102,27 +102,6 @@ const EXERCISE_CONFIG = {
             perfect: 'ดีแล้ว! คงท่า ✅',
             hold: 'คงท่า... {progress}%',
             nextSide: 'ดีมาก! ตอนนี้โยก{side} 👍'
-        }
-    },
-    'neck-tilt': {
-        name: 'ท่าเอียงศีรษะซ้าย-ขวา',
-        targetAngle: { min: 50, max: 500 }, // ลดระยะห่างขั้นต่ำ เพิ่มช่วงให้กว้าง
-        restAngle: { min: 0, max: 100 }, // เพิ่มช่วงพักให้กว้าง
-        landmarks: {
-            ear: [7, 8],
-            shoulder: [11, 12],
-            nose: [0] // เพิ่มจมูกสำหรับตรวจจับ
-        },
-        requiredVisibility: 0.4, // ลดจาก 0.5 เป็น 0.4
-        holdDuration: 800, // ลดจาก 2000 เหลือ 800ms (0.8 วินาที)
-        useHeadPosition: true, // ใช้ตำแหน่งหัวแทนมุม
-        alternating: true,
-        feedback: {
-            tooLow: 'เอียงให้มากขึ้น ↔️',
-            tooHigh: 'พอแล้ว ระวังคอ ⚠️',
-            perfect: 'สมบูรณ์แบบ! ✅',
-            hold: 'กำลังคงท่า... {progress}%',
-            nextSide: 'ดีมาก! ตอนนี้เอียง{side} 👍'
         }
     }
 };
@@ -588,104 +567,93 @@ class ImprovedPoseDetector {
     }
 
     // ⭐ ตรวจจับการเคลื่อนไหว - รองรับการสลับข้าง
-   detectMovement() {
-  const angle = this.exerciseState.smoothedAngle;
-  const target = this.config.targetAngle;
-  const rest = this.config.restAngle;
+detectMovement() {
+    const angle = this.exerciseState.smoothedAngle;
+    const target = this.config.targetAngle;
+    const rest = this.config.restAngle;
 
-  const inTargetRange = angle >= target.min && angle <= target.max;
-  const inRestRange = angle >= rest.min && angle <= rest.max;
+    const inTargetRange = angle >= target.min && angle <= target.max;
+    const inRestRange = angle >= rest.min && angle <= rest.max;
 
-  if (inTargetRange) {
-    this.exerciseState.consecutiveGoodFrames++;
+    if (inTargetRange) {
+        this.exerciseState.consecutiveGoodFrames++;
 
-    // ✅ (A) เข้าช่วงเป้าหมายครั้งแรก → บอกให้คงท่า (ไม่พูดรัว)
-    if (!this.exerciseState.isHolding) {
-      speakCooldown(this, "enterTarget", "ดีมาก คงท่าไว้", 1800);
-
-      this.exerciseState.isHolding = true;
-      this.exerciseState.holdStartTime = Date.now();
-      this.exerciseState.phase = "holding";
-    }
-
-    if (this.exerciseState.holdStartTime) {
-      const holdTime = Date.now() - this.exerciseState.holdStartTime;
-      // ⭐ นับวินาที 1-10
-        const seconds = Math.floor(holdTime / 1000);
-
-        if (seconds > this.exerciseState.lastCount) {
-        this.exerciseState.lastCount = seconds;
-
-        if (seconds <= 5) {
-            speak(seconds.toString());
-        }
+        if (!this.exerciseState.isHolding) {
+            speakCooldown(this, "enterTarget", "ดีมาก คงท่าไว้", 1800);
+            this.exerciseState.isHolding = true;
+            this.exerciseState.holdStartTime = Date.now();
+            this.exerciseState.phase = "holding";
         }
 
-      this.exerciseState.holdProgress = Math.min(
-        100,
-        (holdTime / this.config.holdDuration) * 100
-      );
+        if (this.exerciseState.holdStartTime) {
+            const holdTime = Date.now() - this.exerciseState.holdStartTime;
+            const seconds = Math.floor(holdTime / 1000);
 
-      if (holdTime >= this.config.holdDuration && !this.exerciseState.repCounted) {
-        this.exerciseState.repCounted = true;
+            if (seconds > this.exerciseState.lastCount) {
+                this.exerciseState.lastCount = seconds;
+                if (seconds <= 5) {
+                    speak(seconds.toString());
+                }
+            }
 
-        if (this.config.alternating) {
-          this.incrementRep();
+            this.exerciseState.holdProgress = Math.min(
+                100,
+                (holdTime / this.config.holdDuration) * 100
+            );
 
-          // ✅ (B) หลังนับเสร็จ → สลับข้าง + พูดสลับข้าง
-          if (this.exerciseState.currentSide === "left") {
-            this.exerciseState.currentSide = "right";
-            speakCooldown(this, "switchSide", "สลับข้างขวา", 1200);
-          } else {
-            this.exerciseState.currentSide = "left";
-            speakCooldown(this, "switchSide", "สลับข้างซ้าย", 1200);
-          }
+            if (holdTime >= this.config.holdDuration && !this.exerciseState.repCounted) {
+                this.exerciseState.repCounted = true;
 
-        } else {
-          this.incrementRep();
+                if (this.config.alternating) {
+                    this.incrementRep();
+
+                    if (this.exerciseState.currentSide === "left") {
+                        this.exerciseState.currentSide = "right";
+                        speakCooldown(this, "switchSide", "สลับข้างขวา", 1200);
+                    } else {
+                        this.exerciseState.currentSide = "left";
+                        speakCooldown(this, "switchSide", "สลับข้างซ้าย", 1200);
+                    }
+                } else {
+                    this.incrementRep();
+                }
+            }
         }
-      }
+
+        const targetCenter = (target.min + target.max) / 2;
+        const deviation = Math.abs(angle - targetCenter);
+        const maxDeviation = (target.max - target.min) / 2;
+        this.exerciseState.accuracy = Math.max(0, 100 - (deviation / maxDeviation) * 100);
+
+    } else {
+        if (!inRestRange) {
+            if (angle < target.min - 10) {
+                speakCooldown(this, "tooLow", "ยกให้สูงขึ้น", 1600);
+            } else if (angle > target.max + 10) {
+                speakCooldown(this, "tooHigh", "ลดลงนิดนึง", 1600);
+            }
+        }
+
+        // ✅ รีเซ็ต lastCount เมื่อออกจากท่า
+        if (this.exerciseState.isHolding) {
+            this.exerciseState.isHolding = false;
+            this.exerciseState.holdStartTime = null;
+            this.exerciseState.holdProgress = 0;
+            this.exerciseState.lastCount = 0;  // ✅ เพิ่ม
+        }
+
+        if (inRestRange && this.exerciseState.repCounted) {
+            this.exerciseState.repCounted = false;
+            this.exerciseState.consecutiveGoodFrames = 0;
+            this.exerciseState.phase = "rest";
+            this.exerciseState.lastCount = 0;  // ✅ เพิ่ม (รีเซ็ตอีกครั้งตอนกลับท่าพัก)
+            speakCooldown(this, "backToRest", "เตรียมพร้อม", 2000);
+
+        } else if (!inRestRange) {
+            this.exerciseState.phase = "moving";
+        }
     }
-
-    // คำนวณความแม่นยำ
-    const targetCenter = (target.min + target.max) / 2;
-    const deviation = Math.abs(angle - targetCenter);
-    const maxDeviation = (target.max - target.min) / 2;
-    this.exerciseState.accuracy = Math.max(0, 100 - (deviation / maxDeviation) * 100);
-
-  } else {
-    // ✅ (C) ยังไม่ถึง/เกินเป้า → พูดแนะนำทิศทางแบบมีคูลดาวน์
-    if (!inRestRange) {
-      if (angle < target.min - 10) {
-        speakCooldown(this, "tooLow", "ยกให้สูงขึ้น", 1600);
-      } else if (angle > target.max + 10) {
-        speakCooldown(this, "tooHigh", "ลดลงนิดนึง", 1600);
-      }
-    }
-
-    // รีเซ็ตการคงท่า
-    if (this.exerciseState.isHolding) {
-      this.exerciseState.isHolding = false;
-      this.exerciseState.holdStartTime = null;
-      this.exerciseState.holdProgress = 0;
-      
-
-    }
-
-    if (inRestRange && this.exerciseState.repCounted) {
-      this.exerciseState.repCounted = false;
-      this.exerciseState.consecutiveGoodFrames = 0;
-      this.exerciseState.phase = "rest";
-
-      // ✅ (D) กลับท่าพัก → พูดเตรียมพร้อม (ไม่บังคับ)
-      speakCooldown(this, "backToRest", "เตรียมพร้อม", 2000);
-
-    } else if (!inRestRange) {
-      this.exerciseState.phase = "moving";
-    }
-  }
 }
-
     getStatusMessage() {
         if (!this.config) return '';
         
@@ -714,12 +682,14 @@ class ImprovedPoseDetector {
 
     incrementRep() {
         currentReps++;
+        this.exerciseState.lastCount = 0;  // ✅ รีเซ็ต lastCount หลังนับครบ
 
-        totalAccuracy += this.exerciseState.accuracy;   // ✅ เพิ่ม
-        repAccuracyCount++;                             // ✅ เพิ่ม
+        totalAccuracy += this.exerciseState.accuracy;
+        repAccuracyCount++;
 
         updateRepCounter();
         showSuccessFlash();
+        showCorrectPoseWithFeedback();  // ✅ เพิ่ม เรียกจอเขียว
         playSuccessSound();
 
         console.log(`✅ ทำสำเร็จ ${currentReps}/${targetReps} ครั้ง (ความแม่นยำ: ${Math.round(this.exerciseState.accuracy)}%)`);
@@ -735,22 +705,21 @@ class ImprovedPoseDetector {
             }, 1500);
         }
     }
+        stop() {
+            this.isRunning = false;
+            if (this.camera) this.camera.stop();
+        }
 
-    stop() {
-        this.isRunning = false;
-        if (this.camera) this.camera.stop();
-    }
-
-    destroy() {
-        this.stop();
-        if (elements.video.srcObject) {
-            const stream = elements.video.srcObject;
-            const tracks = stream.getTracks();
-            tracks.forEach(track => track.stop());
-            elements.video.srcObject = null;
+        destroy() {
+            this.stop();
+            if (elements.video.srcObject) {
+                const stream = elements.video.srcObject;
+                const tracks = stream.getTracks();
+                tracks.forEach(track => track.stop());
+                elements.video.srcObject = null;
+            }
         }
     }
-}
 
 // Helper Functions
 function updateRepCounter() {
@@ -1034,47 +1003,6 @@ function showCorrectPoseEffect() {
         }, 2000);
     }
 }
-
-// ============================================
-// วิธีใช้งานในโค้ดหลัก (potex.js หรือไฟล์อื่นๆ)
-// ============================================
-
-/*
-// ตัวอย่าง: เรียกใช้เมื่อตรวจพบท่าถูกต้อง
-function onPoseDetected(isCorrect) {
-    if (isCorrect) {
-        // เพิ่มคะแนน
-        repCount++;
-        document.getElementById('rep-counter').textContent = repCount;
-        
-        // แสดงเอฟเฟกต์จอเขียว
-        showCorrectPoseEffect();
-        
-        // แสดง success flash (ที่มีอยู่แล้ว)
-        const successFlash = document.getElementById('success-flash');
-        if (successFlash) {
-            successFlash.classList.add('show');
-            setTimeout(() => {
-                successFlash.classList.remove('show');
-            }, 600);
-        }
-    }
-}
-
-// ตัวอย่าง: ใช้กับ MediaPipe Pose Detection
-function onPoseResults(results) {
-    // ตรวจสอบท่าทาง
-    const isCorrectPose = checkPoseCorrectness(results);
-    
-    if (isCorrectPose && !lastPoseCorrect) {
-        // ท่าถูกต้องครั้งแรก
-        showCorrectPoseEffect();
-        countRep();
-    }
-    
-    lastPoseCorrect = isCorrectPose;
-}
-*/
 
 // ============================================
 // ฟังก์ชันเพิ่มเติมสำหรับ Mobile
